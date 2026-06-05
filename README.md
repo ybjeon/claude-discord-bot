@@ -20,7 +20,11 @@
    ```env
    DISCORD_TOKEN=your_discord_bot_token
    ALLOWED_CHANNEL_IDS=id1,id2,id3      # optional: restrict to specific channels (comma-separated)
-   PROJECT_DIR=/path/to/your/project    # optional: working directory for Claude Code
+   PROJECT_DIR=/path/to/your/project    # optional: default working directory for Claude Code
+
+   # optional: per-channel working directories (overrides PROJECT_DIR for matched channels)
+   # format: CHANNEL_ID:PATH pairs separated by commas
+   CHANNEL_PROJECT_DIRS=id1:/path/to/project-a,id2:/path/to/project-b
    ```
 
 3. Start the bot:
@@ -31,6 +35,7 @@
 ### Usage
 - Any message sent in the configured channel is forwarded to Claude Code and the response is posted back.
 - If `ALLOWED_CHANNEL_IDS` is set, the bot only responds in those channels (comma-separated list of channel IDs).
+- Each channel can have its own working directory via `CHANNEL_PROJECT_DIRS`. If not set for a channel, falls back to `PROJECT_DIR`.
 
 ## Description
 - A **Discord bot** that integrates with the **Claude AI API** to provide various functionalities such as 

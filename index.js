@@ -16,6 +16,20 @@ const client = new Client({
 
 const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS) || 24 * 60 * 60 * 1000;
 
+const channelProjectDirs = new Map(
+  (process.env.CHANNEL_PROJECT_DIRS || "")
+    .split(",")
+    .filter(Boolean)
+    .map((pair) => {
+      const idx = pair.indexOf(":");
+      return [pair.slice(0, idx).trim(), pair.slice(idx + 1).trim()];
+    })
+);
+
+function getProjectDir(channelId) {
+  return channelProjectDirs.get(channelId) || process.env.PROJECT_DIR || process.cwd();
+}
+
 function sessionsFilePath() {
   return path.join(__dirname, "sessions.json");
 }
@@ -56,9 +70,9 @@ function markSessionInitialized(channelId) {
   }
 }
 
-function runClaude(prompt, sessionEntry) {
+function runClaude(prompt, sessionEntry, channelId) {
   return new Promise((resolve, reject) => {
-    const cwd = process.env.PROJECT_DIR || process.cwd();
+    const cwd = getProjectDir(channelId);
     const sessionFlag = sessionEntry.initialized
       ? ["--resume", sessionEntry.sessionId]
       : ["--session-id", sessionEntry.sessionId];
@@ -113,7 +127,7 @@ client.on(Events.MessageCreate, async (message) => {
   await message.channel.sendTyping();
 
   try {
-    const answer = await runClaude(prompt, sessionEntry);
+    const answer = await runClaude(prompt, sessionEntry, message.channel.id);
     markSessionInitialized(message.channel.id);
     const chunks = answer.match(/[\s\S]{1,1900}/g) || ["응답이 비어 있습니다."];
 
