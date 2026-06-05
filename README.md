@@ -1,12 +1,41 @@
 # Claude-Discord bot
 
-**Version**: 1.0.0
+**Version**: 1.0.1
+
+## How to run
+
+### Prerequisites
+- Node.js 18+
+- [Claude Code CLI](https://claude.ai/code) installed and authenticated (`claude` command available in PATH)
+- A Discord bot token ([Discord Developer Portal](https://discord.com/developers/applications))
+
+### Setup
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Create a `.env` file in the project root:
+   ```env
+   DISCORD_TOKEN=your_discord_bot_token
+   ALLOWED_CHANNEL_ID=your_channel_id   # optional: restrict to one channel
+   PROJECT_DIR=/path/to/your/project    # optional: working directory for Claude Code
+   ```
+
+3. Start the bot:
+   ```bash
+   node index.js
+   ```
+
+### Usage
+- Any message sent in the configured channel is forwarded to Claude Code and the response is posted back.
+- If `ALLOWED_CHANNEL_ID` is set, the bot only responds in that channel.
 
 ## Description
 - A **Discord bot** that integrates with the **Claude AI API** to provide various functionalities such as 
   - generating responses
   - summarizing conversations
-
 
 ## Functions
 - **Message Generation**: The bot can generate responses to user messages using the Claude AI API.
