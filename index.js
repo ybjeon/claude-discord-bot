@@ -2,6 +2,8 @@ require("dotenv").config();
 
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 const { execFile } = require("node:child_process");
+const { randomUUID } = require("node:crypto");
+const fs = require("node:fs");
 const path = require("node:path");
 
 const client = new Client({
@@ -12,15 +14,61 @@ const client = new Client({
   ],
 });
 
-function runClaude(prompt) {
+const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS) || 24 * 60 * 60 * 1000;
+
+function sessionsFilePath() {
+  return path.join(process.env.PROJECT_DIR || process.cwd(), "sessions.json");
+}
+
+function loadSessions() {
+  try {
+    const raw = fs.readFileSync(sessionsFilePath(), "utf8");
+    return new Map(Object.entries(JSON.parse(raw)));
+  } catch {
+    return new Map();
+  }
+}
+
+function saveSessions(sessions) {
+  fs.writeFileSync(sessionsFilePath(), JSON.stringify(Object.fromEntries(sessions)), "utf8");
+}
+
+const sessions = loadSessions();
+
+function getOrCreateSession(channelId) {
+  const entry = sessions.get(channelId);
+  if (entry && Date.now() - entry.lastUsed < SESSION_TTL_MS) {
+    return entry;
+  }
+  const sessionId = randomUUID();
+  const newEntry = { sessionId, lastUsed: Date.now(), initialized: false };
+  sessions.set(channelId, newEntry);
+  saveSessions(sessions);
+  return newEntry;
+}
+
+function markSessionInitialized(channelId) {
+  const entry = sessions.get(channelId);
+  if (entry) {
+    entry.initialized = true;
+    entry.lastUsed = Date.now();
+    saveSessions(sessions);
+  }
+}
+
+function runClaude(prompt, sessionEntry) {
   return new Promise((resolve, reject) => {
     const cwd = process.env.PROJECT_DIR || process.cwd();
+    const sessionFlag = sessionEntry.initialized
+      ? ["--resume", sessionEntry.sessionId]
+      : ["--session-id", sessionEntry.sessionId];
 
     execFile(
       "claude",
       [
         "-p",
         prompt,
+        ...sessionFlag,
         "--append-system-prompt",
         "You are being called from a Discord bot. Be concise. Do not expose secrets.",
       ],
@@ -51,13 +99,22 @@ client.on(Events.MessageCreate, async (message) => {
     return;
   }
 
+  if (message.content.trim() === "!reset") {
+    sessions.delete(message.channel.id);
+    saveSessions(sessions);
+    return message.reply("새 대화를 시작합니다.");
+  }
+
   const prompt = message.content.trim();
   if (!prompt) return;
+
+  const sessionEntry = getOrCreateSession(message.channel.id);
 
   await message.channel.sendTyping();
 
   try {
-    const answer = await runClaude(prompt);
+    const answer = await runClaude(prompt, sessionEntry);
+    markSessionInitialized(message.channel.id);
     const chunks = answer.match(/[\s\S]{1,1900}/g) || ["응답이 비어 있습니다."];
 
     for (const chunk of chunks) {

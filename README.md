@@ -39,7 +39,10 @@
 
 ## Functions
 - **Message Generation**: The bot can generate responses to user messages using the Claude AI API.
-- **Session Management**: T.B.D.
+- **Session Management**: The bot maintains per-channel conversation sessions so Claude remembers prior messages.
+  - Sessions are persisted in `sessions.json` and survive bot restarts.
+  - Sessions expire after 24 hours of inactivity (override with `SESSION_TTL_MS` env var).
+  - Send `!reset` to clear the session and start a fresh conversation.
 
 ## Upgrades todos
 - Test advanced actions (including write and execute)
