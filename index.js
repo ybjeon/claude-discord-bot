@@ -51,10 +51,8 @@ client.on(Events.MessageCreate, async (message) => {
     return;
   }
 
-  if (!message.content.startsWith("!claude ")) return;
-
-  const prompt = message.content.slice("!claude ".length).trim();
-  if (!prompt) return message.reply("질문을 입력해 주세요.");
+  const prompt = message.content.trim();
+  if (!prompt) return;
 
   await message.channel.sendTyping();
 
