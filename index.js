@@ -17,7 +17,7 @@ const client = new Client({
 const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS) || 24 * 60 * 60 * 1000;
 
 function sessionsFilePath() {
-  return path.join(process.env.PROJECT_DIR || process.cwd(), "sessions.json");
+  return path.join(__dirname, "sessions.json");
 }
 
 function loadSessions() {
