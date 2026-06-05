@@ -92,10 +92,10 @@ client.once(Events.ClientReady, (c) => {
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot) return;
 
-  if (
-    process.env.ALLOWED_CHANNEL_ID &&
-    message.channel.id !== process.env.ALLOWED_CHANNEL_ID
-  ) {
+  const allowedChannels = process.env.ALLOWED_CHANNEL_IDS
+    ? process.env.ALLOWED_CHANNEL_IDS.split(",").map((id) => id.trim())
+    : [];
+  if (allowedChannels.length > 0 && !allowedChannels.includes(message.channel.id)) {
     return;
   }
 
