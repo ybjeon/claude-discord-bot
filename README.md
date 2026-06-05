@@ -50,6 +50,6 @@
 - Session creation and scheduling: Set creation period to approximately one day like some clawlike agents
 - Check if Claude Code has a channel concept and apply it #todo
 
-## Promblems
+## Problems
 - little bit of delay
 - Since I cannot see full context of working, I'm still uncomfortable with Write-related operations yet.
