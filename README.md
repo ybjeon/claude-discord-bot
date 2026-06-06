@@ -1,6 +1,6 @@
 # Claude-Discord bot
 
-**Version**: 1.0.1
+**Version**: 1.0.2
 
 ## How to run
 
@@ -41,6 +41,7 @@
 - A **Discord bot** that integrates with the **Claude AI API** to provide various functionalities such as 
   - generating responses
   - summarizing conversations
+  - code/text generation
 
 ## Functions
 - **Message Generation**: The bot can generate responses to user messages using the Claude AI API.
@@ -48,12 +49,15 @@
   - Sessions are persisted in `sessions.json` and survive bot restarts.
   - Sessions expire after 24 hours of inactivity (override with `SESSION_TTL_MS` env var).
   - Send `!reset` to clear the session and start a fresh conversation.
+  - Session can be held per Discord channel.
+
+## Settings
+- Permissions can be configured using `.claude/settings.json` in your project directory.
 
 ## Upgrades todos
-- Test advanced actions (including write and execute)
-- Convert all sending messages to commands (!claude removal as well) - since I'm using the chat room alone
-- Session creation and scheduling: Set creation period to approximately one day like some clawlike agents
-- Check if Claude Code has a channel concept and apply it #todo
+- Execution test
+- Check if Claude Code has a channel concept and apply it
+- Discord button interactions for advanced actions
 
 ## Problems
 - little bit of delay
