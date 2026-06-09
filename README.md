@@ -1,6 +1,6 @@
 # Claude-Discord bot
 
-**Version**: 1.0.2
+**Version**: 1.0.3
 
 ## How to run
 
@@ -16,49 +16,100 @@
    npm install
    ```
 
-2. Create a `.env` file in the project root:
-   ```env
-   DISCORD_TOKEN=your_discord_bot_token
-   ALLOWED_CHANNEL_IDS=id1,id2,id3      # optional: restrict to specific channels (comma-separated)
-   PROJECT_DIR=/path/to/your/project    # optional: default working directory for Claude Code
-
-   # optional: per-channel working directories (overrides PROJECT_DIR for matched channels)
-   # format: CHANNEL_ID:PATH pairs separated by commas
-   CHANNEL_PROJECT_DIRS=id1:/path/to/project-a,id2:/path/to/project-b
+2. Create an instance folder under `instances/` and add a `.env` file:
+   ```bash
+   mkdir instances/my-bot
+   cp instances/workspace-freemode/.env instances/my-bot/.env
+   # then edit instances/my-bot/.env
    ```
 
 3. Start the bot:
    ```bash
-   node index.js
+   # 루트에서 인스턴스 폴더를 인자로 지정
+   node index.js instances/my-bot
+
+   # 또는 인스턴스 폴더 안에서 직접 실행
+   cd instances/my-bot && node ../../index.js
    ```
 
-### Usage
-- Any message sent in the configured channel is forwarded to Claude Code and the response is posted back.
-- If `ALLOWED_CHANNEL_IDS` is set, the bot only responds in those channels (comma-separated list of channel IDs).
-- Each channel can have its own working directory via `CHANNEL_PROJECT_DIRS`. If not set for a channel, falls back to `PROJECT_DIR`.
+---
 
-## Description
-- A **Discord bot** that integrates with the **Claude AI API** to provide various functionalities such as 
-  - generating responses
-  - summarizing conversations
-  - code/text generation
+## Multi-instance setup
+
+Multiple bots (with different Discord tokens and behaviors) can run in parallel from separate instance folders. Each folder has its own `.env` and its own `sessions.json`.
+
+```
+claude-discord-bot/
+  index.js
+  instances/
+    fiance-oracle-prefix/    ← prefix-only mode (!claude)
+      .env
+      sessions.json          (auto-created)
+    workspace-freemode/      ← free mode (responds to all messages)
+      .env
+      sessions.json          (auto-created)
+```
+
+Run each instance in a separate terminal (or as a separate systemd service / pm2 process):
+
+```bash
+# 루트에서 인자로 실행 (권장)
+node index.js instances/finance-oracle-prefix
+node index.js instances/workspace-freemode
+
+# 또는 인스턴스 폴더 안에서 실행
+cd instances/finance-oracle-prefix && node ../../index.js
+```
+
+---
+
+## .env reference
+
+```env
+DISCORD_TOKEN=your_discord_bot_token
+
+# Restrict to specific channels (comma-separated IDs). Leave empty for all channels.
+ALLOWED_CHANNEL_IDS=id1,id2,id3
+
+# Response mode
+PREFIX_ONLY=true          # true  → only respond when message starts with PREFIX
+                          # false → respond to every message
+PREFIX=!claude            # prefix to use when PREFIX_ONLY=true (default: !claude)
+
+# Working directory for Claude Code
+PROJECT_DIR=/path/to/your/project
+
+# Per-channel working directories (overrides PROJECT_DIR for matched channels)
+# Format: CHANNEL_ID:PATH pairs separated by commas
+CHANNEL_PROJECT_DIRS=id1:/path/to/project-a,id2:/path/to/project-b
+
+# Session TTL in milliseconds (default: 24 hours)
+# SESSION_TTL_MS=86400000
+```
+
+---
+
+## Behavior by mode
+
+| Message | `PREFIX_ONLY=true` (`PREFIX=!claude`) | `PREFIX_ONLY=false` |
+|---------|--------------------------------------|---------------------|
+| `!claude 안녕` | responds | responds |
+| `안녕` | ignored | responds |
+| `!reset` | resets session | resets session |
+
+`!reset` always works regardless of mode.
+
+---
 
 ## Functions
-- **Message Generation**: The bot can generate responses to user messages using the Claude AI API.
-- **Session Management**: The bot maintains per-channel conversation sessions so Claude remembers prior messages.
-  - Sessions are persisted in `sessions.json` and survive bot restarts.
-  - Sessions expire after 24 hours of inactivity (override with `SESSION_TTL_MS` env var).
+
+- **Message Generation**: Forwards messages to Claude Code CLI and posts the response back to Discord.
+- **Session Management**: Per-channel conversation sessions so Claude remembers prior messages.
+  - Sessions are persisted in `sessions.json` (inside each instance folder) and survive bot restarts.
+  - Sessions expire after 24 hours of inactivity (override with `SESSION_TTL_MS`).
   - Send `!reset` to clear the session and start a fresh conversation.
-  - Session can be held per Discord channel.
+- **Per-channel project directories**: Each channel can point Claude Code at a different working directory via `CHANNEL_PROJECT_DIRS`.
 
 ## Settings
-- Permissions can be configured using `.claude/settings.json` in your project directory.
 
-## Upgrades todos
-- Execution test
-- Check if Claude Code has a channel concept and apply it
-- Discord button interactions for advanced actions
-
-## Problems
-- little bit of delay
-- Since I cannot see full context of working, I'm still uncomfortable with Write-related operations yet.
+Permissions can be configured using `.claude/settings.json` in your project directory.

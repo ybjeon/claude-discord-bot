@@ -1,10 +1,22 @@
-require("dotenv").config();
+const path = require("node:path");
+
+// 인스턴스 디렉토리 결정 순서:
+//   1. CLI 인자: node index.js instances/my-bot
+//   2. cwd가 루트와 다를 때: cd instances/my-bot && node ../../index.js
+//   3. 그 외: 루트 디렉토리 자체 (루트 .env 사용)
+const instanceArg = process.argv[2];
+const instanceDir = instanceArg
+  ? path.resolve(__dirname, instanceArg)
+  : process.cwd() !== __dirname
+  ? process.cwd()
+  : __dirname;
+
+require("dotenv").config({ path: path.join(instanceDir, ".env") });
 
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 const { execFile } = require("node:child_process");
 const { randomUUID } = require("node:crypto");
 const fs = require("node:fs");
-const path = require("node:path");
 
 const client = new Client({
   intents: [
@@ -15,6 +27,10 @@ const client = new Client({
 });
 
 const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS) || 24 * 60 * 60 * 1000;
+
+// PREFIX_ONLY=true 이면 PREFIX로 시작하는 메시지에만 응답
+const PREFIX_ONLY = process.env.PREFIX_ONLY === "true";
+const PREFIX = (process.env.PREFIX || "!claude").trim();
 
 const channelProjectDirs = new Map(
   (process.env.CHANNEL_PROJECT_DIRS || "")
@@ -30,8 +46,9 @@ function getProjectDir(channelId) {
   return channelProjectDirs.get(channelId) || process.env.PROJECT_DIR || process.cwd();
 }
 
+// sessions.json은 인스턴스 폴더(process.cwd())에 저장
 function sessionsFilePath() {
-  return path.join(__dirname, "sessions.json");
+  return path.join(instanceDir, "sessions.json");
 }
 
 function loadSessions() {
@@ -100,7 +117,8 @@ function runClaude(prompt, sessionEntry, channelId) {
 }
 
 client.once(Events.ClientReady, (c) => {
-  console.log(`Logged in as ${c.user.tag}`);
+  const mode = PREFIX_ONLY ? `prefix-only (${PREFIX})` : "free";
+  console.log(`Logged in as ${c.user.tag} [mode: ${mode}]`);
 });
 
 client.on(Events.MessageCreate, async (message) => {
@@ -113,14 +131,24 @@ client.on(Events.MessageCreate, async (message) => {
     return;
   }
 
-  if (message.content.trim() === "!reset") {
+  const content = message.content.trim();
+
+  // !reset은 모드 무관하게 항상 동작
+  if (content === "!reset") {
     sessions.delete(message.channel.id);
     saveSessions(sessions);
     return message.reply("새 대화를 시작합니다.");
   }
 
-  const prompt = message.content.trim();
-  if (!prompt) return;
+  let prompt;
+  if (PREFIX_ONLY) {
+    if (!content.startsWith(PREFIX)) return;
+    prompt = content.slice(PREFIX.length).trim();
+    if (!prompt) return;
+  } else {
+    prompt = content;
+    if (!prompt) return;
+  }
 
   const sessionEntry = getOrCreateSession(message.channel.id);
 
