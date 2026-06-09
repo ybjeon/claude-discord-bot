@@ -28,10 +28,6 @@ const client = new Client({
 
 const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS) || 24 * 60 * 60 * 1000;
 
-// PREFIX_ONLY=true 이면 PREFIX로 시작하는 메시지에만 응답
-const PREFIX_ONLY = process.env.PREFIX_ONLY === "true";
-const PREFIX = (process.env.PREFIX || "!claude").trim();
-
 const channelProjectDirs = new Map(
   (process.env.CHANNEL_PROJECT_DIRS || "")
     .split(",")
@@ -117,8 +113,7 @@ function runClaude(prompt, sessionEntry, channelId) {
 }
 
 client.once(Events.ClientReady, (c) => {
-  const mode = PREFIX_ONLY ? `prefix-only (${PREFIX})` : "free";
-  console.log(`Logged in as ${c.user.tag} [mode: ${mode}]`);
+  console.log(`Logged in as ${c.user.tag} [mode: mention]`);
 });
 
 client.on(Events.MessageCreate, async (message) => {
@@ -140,15 +135,10 @@ client.on(Events.MessageCreate, async (message) => {
     return message.reply("새 대화를 시작합니다.");
   }
 
-  let prompt;
-  if (PREFIX_ONLY) {
-    if (!content.startsWith(PREFIX)) return;
-    prompt = content.slice(PREFIX.length).trim();
-    if (!prompt) return;
-  } else {
-    prompt = content;
-    if (!prompt) return;
-  }
+  if (!message.mentions.has(client.user)) return;
+
+  const prompt = content.replace(/<@!?\d+>/g, "").trim();
+  if (!prompt) return;
 
   const sessionEntry = getOrCreateSession(message.channel.id);
 
