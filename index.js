@@ -14,9 +14,18 @@ const instanceDir = instanceArg
 require("dotenv").config({ path: path.join(instanceDir, ".env") });
 
 const { Client, GatewayIntentBits, Events } = require("discord.js");
-const { execFile } = require("node:child_process");
+const { execFile, execFileSync } = require("node:child_process");
 const { randomUUID } = require("node:crypto");
 const fs = require("node:fs");
+
+const CLAUDE_BIN = (() => {
+  if (process.env.CLAUDE_PATH) return process.env.CLAUDE_PATH;
+  try {
+    return execFileSync("which", ["claude"], { encoding: "utf8" }).trim();
+  } catch {
+    return "claude";
+  }
+})();
 
 const client = new Client({
   intents: [
@@ -91,7 +100,7 @@ function runClaude(prompt, sessionEntry, channelId) {
       : ["--session-id", sessionEntry.sessionId];
 
     execFile(
-      "claude",
+      CLAUDE_BIN,
       [
         "-p",
         prompt,
