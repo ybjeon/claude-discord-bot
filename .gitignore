@@ -2,3 +2,5 @@ node_modules/
 package-lock.json
 instances/*
 ./run.sh
+!instances/project-example/
+CLAUDE.md

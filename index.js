@@ -37,6 +37,10 @@ const client = new Client({
 
 const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS) || 24 * 60 * 60 * 1000;
 
+// FREE_MODE=true  → 모든 메시지에 응답
+// 미설정(기본)     → mention mode: mention 시에만 응답
+const FREE_MODE = process.env.FREE_MODE === "true";
+
 const channelProjectDirs = new Map(
   (process.env.CHANNEL_PROJECT_DIRS || "")
     .split(",")
@@ -99,12 +103,18 @@ function runClaude(prompt, sessionEntry, channelId) {
       ? ["--resume", sessionEntry.sessionId]
       : ["--session-id", sessionEntry.sessionId];
 
+    const instanceSettingsPath = path.join(instanceDir, "settings.json");
+    const settingsFlag = fs.existsSync(instanceSettingsPath)
+      ? ["--settings", instanceSettingsPath]
+      : [];
+
     execFile(
       CLAUDE_BIN,
       [
         "-p",
         prompt,
         ...sessionFlag,
+        ...settingsFlag,
         "--append-system-prompt",
         "You are being called from a Discord bot. Be concise. Do not expose secrets.",
       ],
@@ -122,7 +132,7 @@ function runClaude(prompt, sessionEntry, channelId) {
 }
 
 client.once(Events.ClientReady, (c) => {
-  console.log(`Logged in as ${c.user.tag} [mode: mention]`);
+  console.log(`Logged in as ${c.user.tag} [mode: ${FREE_MODE ? "free" : "mention"}]`);
 });
 
 client.on(Events.MessageCreate, async (message) => {
@@ -137,14 +147,13 @@ client.on(Events.MessageCreate, async (message) => {
 
   const content = message.content.trim();
 
-  // !reset은 모드 무관하게 항상 동작
   if (content === "!reset") {
     sessions.delete(message.channel.id);
     saveSessions(sessions);
     return message.reply("새 대화를 시작합니다.");
   }
 
-  if (!message.mentions.has(client.user)) return;
+  if (!FREE_MODE && !message.mentions.has(client.user)) return;
 
   const prompt = content.replace(/<@!?\d+>/g, "").trim();
   if (!prompt) return;
