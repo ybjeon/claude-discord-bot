@@ -120,3 +120,18 @@ Claude Code permissions and behavior can be configured in two ways:
 
 1. **Project-level**: `.claude/settings.json` in your project directory (`PROJECT_DIR`).
 2. **Instance-level**: `settings.json` in the instance folder — automatically passed as `--settings` to Claude Code when present.
+
+### Permission control
+
+The `allow` list in settings.json is **additive** — it does not restrict Claude Code's default permitted tools (Write, Edit, Bash, etc.). To lock down an instance, explicitly `deny` the tools you want to block.
+
+For example, a read-only instance requires both an `allow` list and a `deny` list:
+
+```json
+{
+  "permissions": {
+    "allow": ["Read"],
+    "deny": ["Edit", "Write", "Bash(*)", "Glob", "LS"]
+  }
+}
+```
